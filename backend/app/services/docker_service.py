@@ -58,6 +58,7 @@ class DockerService:
                 detach=True,
                 ports={'22267/tcp': 0},  # 自动分配主机端口
                 volumes={
+                    '/home/nero/AzurLaneAutoScript': {'bind': '/app/AzurLaneAutoScript', 'mode': 'rw'},
                     config_path: {'bind': '/app/AzurLaneAutoScript/config', 'mode': 'rw'},
                     '/etc/localtime': {'bind': '/etc/localtime', 'mode': 'ro'}
                 },
