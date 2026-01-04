@@ -43,6 +43,47 @@ class DockerService:
         # 确保配置目录存在
         os.makedirs(config_path, exist_ok=True)
         
+        # 预先生成 deploy.yaml，解决从镜像启动时配置不全的问题
+        import shutil
+        import random
+        import string
+        
+        try:
+            # 模板文件路径（假设在 backend 目录下）
+            current_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            template_path = os.path.join(current_dir, "deploy.template.yaml")
+            target_path = os.path.join(config_path, "deploy.yaml")
+            
+            if os.path.exists(template_path):
+                # 复制模板
+                shutil.copy2(template_path, target_path)
+                
+                # 读取并注入 SSH 用户名
+                with open(target_path, 'r', encoding='utf-8') as f:
+                    config = yaml.safe_load(f) or {}
+                
+                # 生成随机 SSH 用户名
+                timestamp_part = str(int(time.time()))[-6:] # 取时间戳后6位
+                random_part = ''.join(random.choices(string.ascii_lowercase + string.digits, k=4))
+                generated_ssh_user = f"alas{timestamp_part}{random_part}"
+                
+                # 更新配置
+                if 'Deploy' not in config: config['Deploy'] = {}
+                if 'RemoteAccess' not in config['Deploy']: config['Deploy']['RemoteAccess'] = {}
+                
+                config['Deploy']['RemoteAccess']['SSHUser'] = generated_ssh_user
+                
+                # 写回文件
+                with open(target_path, 'w', encoding='utf-8') as f:
+                    yaml.dump(config, f, allow_unicode=True)
+                    
+                print(f"配置文件已预生成并注入 SSHUser: {generated_ssh_user}")
+            else:
+                print(f"警告: 模板文件未找到: {template_path}，将跳过预生成配置")
+                
+        except Exception as e:
+            print(f"警告: 预生成配置文件失败: {str(e)}")
+        
         # 拉取最新镜像
         try:
             print(f"正在拉取镜像: {settings.DOCKER_IMAGE}")
