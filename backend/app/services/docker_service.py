@@ -225,8 +225,11 @@ class DockerService:
         ssh_port = ssh_server_parts[1] if len(ssh_server_parts) > 1 else '22'
         
         # 构建 SSH 命令
+        # 添加参数以跳过主机密钥检查，解决 "Host key verification failed" 问题
         ssh_command = [
             'ssh', '-R', '/:127.0.0.1:22267',
+            '-o', 'StrictHostKeyChecking=no',
+            '-o', 'UserKnownHostsFile=/dev/null',
             '-p', ssh_port,
             f'{ssh_user}@{ssh_host}',
             '--', '--output', 'json'
