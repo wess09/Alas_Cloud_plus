@@ -263,6 +263,22 @@ class DockerService:
                 ssh_user = generated_ssh_user
                 print(f"已自动生成并写入 SSHUser: {ssh_user}")
                 
+                # 写入后等待 5 秒，确保文件写入完成且容器可能进行的重载完成
+                print("等待 5 秒以确认配置生效...")
+                time.sleep(5)
+                
+                # 再次读取配置以确认
+                try:
+                    with open(deploy_yaml_path, 'r', encoding='utf-8') as f:
+                        config_recheck = yaml.safe_load(f) or {}
+                    ssh_user_recheck = config_recheck.get('Deploy', {}).get('RemoteAccess', {}).get('SSHUser')
+                    
+                    if ssh_user_recheck:
+                        ssh_user = ssh_user_recheck
+                        print(f"确认使用的 SSHUser: {ssh_user}")
+                except Exception as e:
+                    print(f"重读配置失败，将使用刚才生成的配置: {str(e)}")
+                
         except Exception as e:
             raise RuntimeError(f"处理配置文件失败: {str(e)}")
             
