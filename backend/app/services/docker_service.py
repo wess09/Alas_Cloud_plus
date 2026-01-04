@@ -138,6 +138,23 @@ class DockerService:
             return True
         except Exception as e:
             raise RuntimeError(f"删除容器失败: {str(e)}")
+
+    def restart_container(self, container_id: str) -> bool:
+        """
+        重启容器
+        
+        Args:
+            container_id: 容器 ID
+            
+        Returns:
+            bool: 是否成功重启
+        """
+        try:
+            container = self.client.containers.get(container_id)
+            container.restart()
+            return True
+        except Exception as e:
+            raise RuntimeError(f"重启容器失败: {str(e)}")
     
     def get_container_status(self, container_id: str) -> Dict[str, Any]:
         """

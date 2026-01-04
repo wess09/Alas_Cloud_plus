@@ -267,8 +267,12 @@ def create_instance(
             try:
                 remote_url = docker_service.get_remote_url(container_info['config_path'])
                 new_instance.url = remote_url
+                
+                # 获取 URL 后重启容器以确保配置生效
+                print(f"获取 URL 成功 ({remote_url})，正在重启容器...")
+                docker_service.restart_container(new_instance.container_id)
             except Exception as e:
-                print(f"警告：无法获取远程 URL: {str(e)}")
+                print(f"警告：无法获取远程 URL 或重启容器失败: {str(e)}")
             
             db.commit()
             db.refresh(new_instance)

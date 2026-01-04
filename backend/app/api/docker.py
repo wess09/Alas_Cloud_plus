@@ -54,9 +54,13 @@ async def deploy_instance(
         try:
             remote_url = docker_service.get_remote_url(container_info['config_path'])
             instance.url = remote_url
+            
+            # 获取 URL 后重启容器以确保配置生效
+            print(f"获取 URL 成功 ({remote_url})，正在重启容器...")
+            docker_service.restart_container(instance.container_id)
         except Exception as e:
             # 如果无法立即获取 URL，保持原 URL 不变
-            print(f"警告：无法获取远程 URL: {str(e)}")
+            print(f"警告：无法获取远程 URL 或重启容器失败: {str(e)}")
         
         db.commit()
         db.refresh(instance)
@@ -272,8 +276,16 @@ async def update_instance_remote_url(
         instance.url = remote_url
         db.commit()
         
+        # 获取 URL 后重启容器以确保配置生效
+        if instance.container_id:
+            try:
+                print(f"URL 更新成功 ({remote_url})，正在重启容器...")
+                docker_service.restart_container(instance.container_id)
+            except Exception as e:
+                print(f"警告：重启容器失败: {str(e)}")
+        
         return {
-            "message": "远程 URL 更新成功",
+            "message": "远程 URL 更新成功（容器已重启）",
             "instance_id": instance_id,
             "url": remote_url
         }
