@@ -215,28 +215,62 @@ class DockerService:
         # 增加重试机制，等待配置文件生成（最多等待 30 秒）
         ssh_user = None
         last_error = None
+        deploy_yaml_path = os.path.join(config_path, "deploy.yaml")
         
-        for _ in range(15):  # 尝试 15 次，每次间隔 2 秒
-            try:
-                config = self.read_deploy_yaml(config_path)
-                deploy_config = config.get('Deploy', {})
-                remote_access = deploy_config.get('RemoteAccess', {})
-                ssh_user = remote_access.get('SSHUser')
-                
-                if ssh_user:
-                    break
-                else:
-                    last_error = ValueError("deploy.yaml 中未配置 SSHUser")
-            except Exception as e:
-                last_error = e
-                # 配置文件可能还没生成，等待后重试
-                pass
+        # 1. 等待配置文件生成
+        config_exists = False
+        for _ in range(30):  # 尝试 30 次，每次 1 秒（总共 30 秒）
+            if os.path.exists(deploy_yaml_path):
+                config_exists = True
+                break
+            time.sleep(1)
             
-            time.sleep(2)
+        if not config_exists:
+            raise RuntimeError("超时：配置文件未生成")
+
+        # 2. 生成随机字符串并填入 deploy.yaml
+        import random
+        import string
+        
+        try:
+            # 读取现有配置
+            with open(deploy_yaml_path, 'r', encoding='utf-8') as f:
+                config = yaml.safe_load(f) or {}
+            
+            deploy_config = config.get('Deploy', {})
+            remote_access = deploy_config.get('RemoteAccess', {})
+            ssh_user = remote_access.get('SSHUser')
+            
+            # 如果没有 SSHUser，生成一个并写入
+            if not ssh_user:
+                # 生成 10 位随机字符串
+                timestamp_part = str(int(time.time()))[-6:] # 取时间戳后6位
+                random_part = ''.join(random.choices(string.ascii_lowercase + string.digits, k=4))
+                generated_ssh_user = f"alas{timestamp_part}{random_part}"
+                
+                # 更新配置结构
+                if 'Deploy' not in config:
+                    config['Deploy'] = {}
+                if 'RemoteAccess' not in config['Deploy']:
+                    config['Deploy']['RemoteAccess'] = {}
+                
+                config['Deploy']['RemoteAccess']['SSHUser'] = generated_ssh_user
+                
+                # 写回文件
+                with open(deploy_yaml_path, 'w', encoding='utf-8') as f:
+                    yaml.dump(config, f, allow_unicode=True)
+                
+                ssh_user = generated_ssh_user
+                print(f"已自动生成并写入 SSHUser: {ssh_user}")
+                
+        except Exception as e:
+            raise RuntimeError(f"处理配置文件失败: {str(e)}")
             
         if not ssh_user:
-            raise RuntimeError(f"无法获取 SSH 用户名: {str(last_error)}")
-        
+             # 双重检查
+            raise ValueError("未能获取或生成 SSHUser")
+            
+        # 3. 建立 SSH 隧道
         # 解析 SSH 服务器地址和端口
         ssh_server_parts = settings.DOCKER_SSH_SERVER.split(':')
         ssh_host = ssh_server_parts[0]
