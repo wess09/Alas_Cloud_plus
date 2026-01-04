@@ -38,7 +38,13 @@ class DockerService:
         container_name = f"{settings.DOCKER_CONTAINER_PREFIX}_{timestamp}"
         
         # 配置文件路径：/home/nero/alas/{容器名}/config
-        config_path = os.path.join(settings.DOCKER_BASE_PATH, container_name, "config")
+        # 确保转换为绝对路径，避免 Windows/Docker 路径解析不一致
+        # 如果 settings.DOCKER_BASE_PATH 是 "/home/nero/alas"，在 Windows 下 os.path.abspath 会将其解析为 "C:\home\nero\alas" (假设当前在C盘)
+        # 这样传给 Docker 挂载时，明确指定了 Windows 路径，避免歧义
+        base_path = os.path.abspath(settings.DOCKER_BASE_PATH)
+        config_path = os.path.join(base_path, container_name, "config")
+        
+        print(f"[DEBUG] 计算出的配置路径 (config_path): {config_path}")
         
         # 确保配置目录存在
         os.makedirs(config_path, exist_ok=True)
@@ -49,15 +55,23 @@ class DockerService:
         import string
         
         try:
-            # 模板文件路径（假设在 backend 目录下）
-            current_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-            template_path = os.path.join(current_dir, "deploy.template.yaml")
+            # 模板文件路径（用户指定）
+            template_path = "/home/nero/data/deploy.yaml"
             target_path = os.path.join(config_path, "deploy.yaml")
             
+            print(f"[DEBUG] 模板路径: {template_path}")
+            print(f"[DEBUG] 目标路径: {target_path}")
+            
             if os.path.exists(template_path):
+                print("[DEBUG] 找到模板文件，开始复制...")
                 # 复制模板
                 shutil.copy2(template_path, target_path)
                 
+                if os.path.exists(target_path):
+                     print(f"[DEBUG] 复制成功，文件大小: {os.path.getsize(target_path)} bytes")
+                else:
+                     print("[DEBUG] 复制看似成功但文件不存在！")
+
                 # 读取并注入 SSH 用户名
                 with open(target_path, 'r', encoding='utf-8') as f:
                     config = yaml.safe_load(f) or {}
@@ -77,12 +91,14 @@ class DockerService:
                 with open(target_path, 'w', encoding='utf-8') as f:
                     yaml.dump(config, f, allow_unicode=True)
                     
-                print(f"配置文件已预生成并注入 SSHUser: {generated_ssh_user}")
+                print(f"[DEBUG] 配置文件已更新并注入 SSHUser: {generated_ssh_user}")
             else:
-                print(f"警告: 模板文件未找到: {template_path}，将跳过预生成配置")
+                print(f"[WARNING] 模板文件未找到: {template_path}")
                 
         except Exception as e:
-            print(f"警告: 预生成配置文件失败: {str(e)}")
+             import traceback
+             traceback.print_exc()
+             print(f"[ERROR] 预生成配置文件失败: {str(e)}")
         
         # 拉取最新镜像
         try:
