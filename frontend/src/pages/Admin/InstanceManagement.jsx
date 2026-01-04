@@ -53,9 +53,13 @@ const InstanceManagement = () => {
     });
   };
 
+  const [confirmLoading, setConfirmLoading] = useState(false);
+
   const handleModalOk = async () => {
     try {
       const values = await form.validateFields();
+      setConfirmLoading(true);
+      
       if (editingInstance) {
         await api.put(`/admin/instances/${editingInstance.id}`, values);
         message.success('更新成功');
@@ -72,13 +76,19 @@ const InstanceManagement = () => {
           params.append('auto_deploy', 'true');
         }
         
-        await api.post(`/admin/instances?${params.toString()}`, values);
+        // 增加超时时间到 60 秒，因为自动部署可能需要较长时间
+        await api.post(`/admin/instances?${params.toString()}`, values, { timeout: 60000 });
         message.success('创建成功' + (autoDeploy ? '，正在部署容器（需等待约20秒获取URL）...' : ''));
       }
       setModalVisible(false);
       fetchInstances();
     } catch (error) {
+      if (error.code === 'ECONNABORTED') {
+        message.warning('请求超时，但在后台可能仍在继续执行，请稍后刷新列表查看。');
+      }
       // 表单验证错误或API错误
+    } finally {
+      setConfirmLoading(false);
     }
   };
 
@@ -312,6 +322,7 @@ const InstanceManagement = () => {
         title={editingInstance ? '编辑实例' : '新建实例'}
         open={modalVisible}
         onOk={handleModalOk}
+        confirmLoading={confirmLoading}
         onCancel={() => setModalVisible(false)}
         width={600}
       >
