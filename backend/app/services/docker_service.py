@@ -55,8 +55,8 @@ class DockerService:
         import string
         
         try:
-            # 模板文件路径（用户指定）
-            template_path = "/home/nero/data/deploy.yaml"
+            # 模板文件路径（容器内路径）
+            template_path = "/app/data/deploy.yaml"
             target_path = os.path.join(config_path, "deploy.yaml")
             
             print(f"[DEBUG] 模板路径: {template_path}")
