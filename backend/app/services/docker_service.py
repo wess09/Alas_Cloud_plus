@@ -194,16 +194,30 @@ class DockerService:
             str: 远程访问 URL
         """
         # 从 deploy.yaml 读取 SSH 用户名
-        try:
-            config = self.read_deploy_yaml(config_path)
-            deploy_config = config.get('Deploy', {})
-            remote_access = deploy_config.get('RemoteAccess', {})
-            ssh_user = remote_access.get('SSHUser')
+        # 增加重试机制，等待配置文件生成（最多等待 30 秒）
+        ssh_user = None
+        last_error = None
+        
+        for _ in range(15):  # 尝试 15 次，每次间隔 2 秒
+            try:
+                config = self.read_deploy_yaml(config_path)
+                deploy_config = config.get('Deploy', {})
+                remote_access = deploy_config.get('RemoteAccess', {})
+                ssh_user = remote_access.get('SSHUser')
+                
+                if ssh_user:
+                    break
+                else:
+                    last_error = ValueError("deploy.yaml 中未配置 SSHUser")
+            except Exception as e:
+                last_error = e
+                # 配置文件可能还没生成，等待后重试
+                pass
             
-            if not ssh_user:
-                raise ValueError("deploy.yaml 中未配置 SSHUser")
-        except Exception as e:
-            raise RuntimeError(f"无法获取 SSH 用户名: {str(e)}")
+            time.sleep(2)
+            
+        if not ssh_user:
+            raise RuntimeError(f"无法获取 SSH 用户名: {str(last_error)}")
         
         # 解析 SSH 服务器地址和端口
         ssh_server_parts = settings.DOCKER_SSH_SERVER.split(':')

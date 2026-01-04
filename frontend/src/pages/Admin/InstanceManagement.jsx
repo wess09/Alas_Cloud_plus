@@ -73,7 +73,7 @@ const InstanceManagement = () => {
         }
         
         await api.post(`/admin/instances?${params.toString()}`, values);
-        message.success('创建成功' + (autoDeploy ? '，正在部署容器...' : ''));
+        message.success('创建成功' + (autoDeploy ? '，正在部署容器（需等待约20秒获取URL）...' : ''));
       }
       setModalVisible(false);
       fetchInstances();
@@ -157,6 +157,17 @@ const InstanceManagement = () => {
     return <Tag color={config.color}>{config.text}</Tag>;
   };
 
+  const handleUpdateUrl = async (record) => {
+    try {
+      message.loading({ content: '正在更新远程 URL...', key: 'updateUrl' });
+      const { url } = await api.post(`/admin/docker/instances/${record.id}/update-url`);
+      message.success({ content: `远程 URL 更新成功: ${url}`, key: 'updateUrl' });
+      fetchInstances();
+    } catch (error) {
+      message.error({ content: '更新远程 URL 失败', key: 'updateUrl' });
+    }
+  };
+
   const columns = [
     {
       title: 'ID',
@@ -172,7 +183,21 @@ const InstanceManagement = () => {
       title: 'URL',
       dataIndex: 'url',
       key: 'url',
-      render: (text) => <a href={text} target="_blank" rel="noopener noreferrer">{text}</a>
+      render: (text, record) => {
+        if (!text && record.container_id) {
+          return (
+            <Button 
+              type="link" 
+              size="small"
+              icon={<ReloadOutlined />} 
+              onClick={() => handleUpdateUrl(record)}
+            >
+              获取 URL
+            </Button>
+          );
+        }
+        return text ? <a href={text} target="_blank" rel="noopener noreferrer">{text}</a> : '-';
+      }
     },
     {
       title: '容器状态',
@@ -244,6 +269,16 @@ const InstanceManagement = () => {
               onClick={() => handleStartContainer(record.id)}
             >
               启动
+            </Button>
+          )}
+          
+          {record.container_id && !record.url && (
+            <Button 
+              type="link" 
+              icon={<ReloadOutlined />} 
+              onClick={() => handleUpdateUrl(record)}
+            >
+              更新URL
             </Button>
           )}
           
