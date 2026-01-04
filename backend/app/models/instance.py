@@ -10,7 +10,7 @@ class Instance(Base):
     
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(100), nullable=False)
-    url = Column(String(500), nullable=False)
+    url = Column(String(500), nullable=True)
     description = Column(Text, nullable=True)
     
     # Docker 容器信息

@@ -284,8 +284,8 @@ const InstanceManagement = () => {
           <Form.Item name="name" label="实例名称" rules={[{ required: true, message: '请输入实例名称' }]}>
             <Input />
           </Form.Item>
-          <Form.Item name="url" label="URL" rules={[{ required: true, message: '请输入实例URL' }, { type: 'url', message: '请输入有效的URL' }]}>
-            <Input />
+          <Form.Item name="url" label="URL">
+            <Input placeholder="自动部署时可选，将自动生成" />
           </Form.Item>
           <Form.Item name="description" label="描述">
             <Input.TextArea />

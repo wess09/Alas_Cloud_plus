@@ -6,7 +6,7 @@ from datetime import datetime
 class InstanceBase(BaseModel):
     """实例基础模型"""
     name: str = Field(..., min_length=1, max_length=100, description="实例名称")
-    url: str = Field(..., min_length=1, max_length=500, description="实例URL")
+    url: Optional[str] = Field(None, max_length=500, description="实例URL")
     description: Optional[str] = Field(None, description="实例描述")
 
 
