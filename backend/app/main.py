@@ -32,7 +32,39 @@ app.include_router(docker_router)
 @app.on_event("startup")
 def on_startup():
     """应用启动时初始化数据库"""
+    from app.database import SessionLocal, Base, engine
+    from app.models import User, UserRole
+    import bcrypt
+    
+    # 初始化数据库表结构
     init_db()
+    
+    # 检查并创建默认管理员账号
+    db = SessionLocal()
+    try:
+        existing_admin = db.query(User).filter(User.role == UserRole.ADMIN).first()
+        if not existing_admin:
+            # 创建默认管理员
+            password = "admin123"
+            password_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+            
+            admin = User(
+                username="admin",
+                password_hash=password_hash,
+                role=UserRole.ADMIN
+            )
+            db.add(admin)
+            db.commit()
+            print("✓ 默认管理员账号已创建")
+            print("  用户名: admin")
+            print("  密码: admin123")
+        else:
+            print("✓ 管理员账号已存在")
+    except Exception as e:
+        print(f"⚠ 初始化默认数据时出错: {e}")
+        db.rollback()
+    finally:
+        db.close()
 
 
 @app.get("/", tags=["根路径"])

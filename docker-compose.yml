@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  alas-manager:
+    image: hajiming/alascloudplus:latest
+    container_name: alas-manager
+    ports:
+      - "8001:8001"
+    volumes:
+      # 必须：挂载 Docker 运行套接字，以便管理其他容器
+      - /var/run/docker.sock:/var/run/docker.sock
+      # 必须：挂载 ALAS 配置根目录，必须与宿主机路径一致
+      - /home/nero/alas:/home/nero/alas
+      # 挂载数据目录，用于持久化数据库
+      - ./data:/app/data
+      # 挂载环境变量文件
+      - ./backend/.env:/app/.env
+    restart: unless-stopped
+    environment:
+      - TZ=Asia/Shanghai
+      - DATABASE_URL=sqlite:////app/data/app.db
+
+  # 如果你需要同时在 Docker 中运行前端，可以添加一个 Nginx 服务
+  # frontend:
+  #   image: nginx:alpine
+  #   ports:
+  #     - "80:80"
+  #   volumes:
+  #     - ./frontend/dist:/usr/share/nginx/html
+  #     - ./nginx.conf:/etc/nginx/conf.d/default.conf
