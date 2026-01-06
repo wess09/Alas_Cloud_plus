@@ -28,18 +28,22 @@ class HealthCheckService:
             else:
                 return "unhealthy"
         except Exception as e:
-            # logger.warning(f"Health check failed for {instance.name} ({instance.url}): {e}")
+            print(f"[HealthCheck] 检查失败 {instance.name}: {e}")
             return "unhealthy"
 
     @staticmethod
     async def check_all_instances():
         """Check health for all instances"""
+        print("[HealthCheck] 开始执行健康检查...")
         try:
             db = SessionLocal()
             instances = db.query(Instance).filter(Instance.url.isnot(None)).all()
             
+            print(f"[HealthCheck] 找到 {len(instances)} 个有URL的实例")
+            
             if not instances:
                 db.close()
+                print("[HealthCheck] 没有需要检查的实例")
                 return
 
             # Use asynchronous context manager for httpx client
@@ -55,8 +59,11 @@ class HealthCheckService:
             
             db.commit()
             db.close()
+            print("[HealthCheck] 健康检查完成")
         except Exception as e:
-            logger.error(f"Error in health check job: {e}")
+            print(f"[HealthCheck] 发生错误: {e}")
+            import traceback
+            traceback.print_exc()
             if 'db' in locals():
                 db.close()
 
@@ -67,4 +74,4 @@ class HealthCheckService:
         if status:
             instance.health_status = status
             instance.last_health_check = datetime.utcnow()
-            # print(f"Instance {instance.name} status: {status}")
+            print(f"[HealthCheck] {instance.name}: {status}")
