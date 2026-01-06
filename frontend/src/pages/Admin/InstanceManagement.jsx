@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Table, Button, Modal, Form, Input, message, Space, Switch, Tag, Tooltip } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined, PlayCircleOutlined, PauseCircleOutlined, CloseCircleOutlined, ReloadOutlined, CloudUploadOutlined } from '@ant-design/icons';
+import { PlusOutlined, EditOutlined, DeleteOutlined, PlayCircleOutlined, PauseCircleOutlined, CloseCircleOutlined, ReloadOutlined, CloudUploadOutlined, SettingOutlined } from '@ant-design/icons';
 import api from '../../utils/request';
 
 const InstanceManagement = () => {
@@ -9,6 +9,12 @@ const InstanceManagement = () => {
   const [modalVisible, setModalVisible] = useState(false);
   const [editingInstance, setEditingInstance] = useState(null);
   const [form] = Form.useForm();
+  
+  // Config modal state
+  const [configModalVisible, setConfigModalVisible] = useState(false);
+  const [configContent, setConfigContent] = useState('');
+  const [configInstanceId, setConfigInstanceId] = useState(null);
+  const [configLoading, setConfigLoading] = useState(false);
 
   const fetchInstances = async () => {
     setLoading(true);
@@ -174,6 +180,31 @@ const InstanceManagement = () => {
     }
   };
 
+  const handleOpenConfig = async (record) => {
+    setConfigInstanceId(record.id);
+    setConfigLoading(true);
+    setConfigModalVisible(true);
+    try {
+      const { content } = await api.get(`/admin/docker/instances/${record.id}/config`);
+      setConfigContent(content);
+    } catch (error) {
+      setConfigContent('');
+    }
+    setConfigLoading(false);
+  };
+
+  const handleSaveConfig = async () => {
+    setConfigLoading(true);
+    try {
+      await api.put(`/admin/docker/instances/${configInstanceId}/config`, { content: configContent });
+      message.success('配置保存成功');
+      setConfigModalVisible(false);
+    } catch (error) {
+      // 错误处理已在拦截器中完成
+    }
+    setConfigLoading(false);
+  };
+
   const getContainerStatusTag = (status) => {
     const statusMap = {
       'running': { color: 'green', text: '运行中' },
@@ -287,6 +318,9 @@ const InstanceManagement = () => {
       render: (_, record) => (
         <Space size="small" wrap>
           <Button type="link" icon={<EditOutlined />} onClick={() => handleEdit(record)}>编辑</Button>
+          {record.config_path && (
+            <Button type="link" icon={<SettingOutlined />} onClick={() => handleOpenConfig(record)}>配置</Button>
+          )}
           <Button type="link" danger icon={<DeleteOutlined />} onClick={() => handleDelete(record)}>删除</Button>
           
           {!record.container_id && (
@@ -389,6 +423,26 @@ const InstanceManagement = () => {
             </Form.Item>
           )}
         </Form>
+      </Modal>
+
+      {/* Config Modal */}
+      <Modal
+        title="编辑配置文件 (deploy.yaml)"
+        open={configModalVisible}
+        onOk={handleSaveConfig}
+        confirmLoading={configLoading}
+        onCancel={() => setConfigModalVisible(false)}
+        width={800}
+        okText="保存"
+        cancelText="取消"
+      >
+        <Input.TextArea
+          value={configContent}
+          onChange={(e) => setConfigContent(e.target.value)}
+          rows={20}
+          style={{ fontFamily: 'monospace', fontSize: 13 }}
+          placeholder="加载配置中..."
+        />
       </Modal>
     </div>
   );

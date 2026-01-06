@@ -1,9 +1,16 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from pydantic import BaseModel
 from app.database import get_db
 from app.models import User, Instance
 from app.core.deps import get_current_admin
 from app.services import DockerService
+import yaml
+import os
+
+
+class ConfigUpdate(BaseModel):
+    content: str
 
 router = APIRouter(prefix="/api/admin/docker", tags=["Docker管理"])
 
@@ -331,4 +338,88 @@ async def restart_instance_container(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"重启容器失败: {str(e)}"
+        )
+
+
+@router.get("/instances/{instance_id}/config", summary="获取实例配置")
+async def get_instance_config(
+    instance_id: int,
+    db: Session = Depends(get_db),
+    current_admin: User = Depends(get_current_admin)
+):
+    """获取指定实例的 deploy.yaml 配置内容"""
+    instance = db.query(Instance).filter(Instance.id == instance_id).first()
+    
+    if not instance:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="实例不存在"
+        )
+    
+    if not instance.config_path:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="实例配置路径不存在"
+        )
+    
+    config_file = os.path.join(instance.config_path, "deploy.yaml")
+    
+    if not os.path.exists(config_file):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="配置文件不存在"
+        )
+    
+    try:
+        with open(config_file, 'r', encoding='utf-8') as f:
+            content = f.read()
+        return {"content": content, "instance_id": instance_id}
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"读取配置文件失败: {str(e)}"
+        )
+
+
+@router.put("/instances/{instance_id}/config", summary="更新实例配置")
+async def update_instance_config(
+    instance_id: int,
+    config_data: ConfigUpdate,
+    db: Session = Depends(get_db),
+    current_admin: User = Depends(get_current_admin)
+):
+    """更新指定实例的 deploy.yaml 配置"""
+    instance = db.query(Instance).filter(Instance.id == instance_id).first()
+    
+    if not instance:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="实例不存在"
+        )
+    
+    if not instance.config_path:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="实例配置路径不存在"
+        )
+    
+    # 验证 YAML 格式
+    try:
+        yaml.safe_load(config_data.content)
+    except yaml.YAMLError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"YAML 格式错误: {str(e)}"
+        )
+    
+    config_file = os.path.join(instance.config_path, "deploy.yaml")
+    
+    try:
+        with open(config_file, 'w', encoding='utf-8') as f:
+            f.write(config_data.content)
+        return {"message": "配置更新成功", "instance_id": instance_id}
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"保存配置文件失败: {str(e)}"
         )
