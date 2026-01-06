@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Table, Button, Modal, Form, Input, message, Space, Switch, Tag, Tooltip } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, PlayCircleOutlined, PauseCircleOutlined, CloseCircleOutlined, ReloadOutlined, CloudUploadOutlined, SettingOutlined } from '@ant-design/icons';
+import Editor from '@monaco-editor/react';
 import api from '../../utils/request';
 
 const InstanceManagement = () => {
@@ -316,73 +317,79 @@ const InstanceManagement = () => {
       key: 'action',
       width: 300,
       render: (_, record) => (
-        <Space size="small" wrap>
-          <Button type="link" icon={<EditOutlined />} onClick={() => handleEdit(record)}>编辑</Button>
-          {record.config_path && (
-            <Button type="link" icon={<SettingOutlined />} onClick={() => handleOpenConfig(record)}>配置</Button>
-          )}
-          <Button type="link" danger icon={<DeleteOutlined />} onClick={() => handleDelete(record)}>删除</Button>
-          
-          {!record.container_id && (
-            <Button 
-              type="link" 
-              icon={<CloudUploadOutlined />} 
-              onClick={() => handleDeployContainer(record.id)}
-            >
-              部署容器
-            </Button>
-          )}
-          
-          {record.container_id && record.container_status === 'running' && (
-            <>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+          {/* 第一行：基本编辑操作 */}
+          <Space size="small">
+            <Button type="link" icon={<EditOutlined />} onClick={() => handleEdit(record)}>编辑</Button>
+            {record.config_path && (
+              <Button type="link" icon={<SettingOutlined />} onClick={() => handleOpenConfig(record)}>配置</Button>
+            )}
+            <Button type="link" danger icon={<DeleteOutlined />} onClick={() => handleDelete(record)}>删除</Button>
+          </Space>
+
+          {/* 第二行：容器操作 */}
+          <Space size="small">
+            {!record.container_id && (
               <Button 
                 type="link" 
-                icon={<PauseCircleOutlined />} 
-                onClick={() => handleStopContainer(record.id)}
+                icon={<CloudUploadOutlined />} 
+                onClick={() => handleDeployContainer(record.id)}
               >
-                停止
+                部署容器
               </Button>
+            )}
+
+            {record.container_id && record.container_status !== 'running' && record.container_status !== 'removed' && (
+              <Button 
+                type="link" 
+                icon={<PlayCircleOutlined />} 
+                onClick={() => handleStartContainer(record.id)}
+              >
+                启动
+              </Button>
+            )}
+            
+            {record.container_id && record.container_status === 'running' && (
+              <>
+                <Button 
+                  type="link" 
+                  icon={<PauseCircleOutlined />} 
+                  onClick={() => handleStopContainer(record.id)}
+                >
+                  停止
+                </Button>
+                <Button 
+                  type="link" 
+                  icon={<ReloadOutlined />} 
+                  onClick={() => handleRestartContainer(record.id)}
+                >
+                  重启
+                </Button>
+              </>
+            )}
+
+            {record.container_id && record.container_status !== 'removed' && (
+              <Button 
+                type="link" 
+                danger 
+                icon={<CloseCircleOutlined />} 
+                onClick={() => handleRemoveContainer(record.id)}
+              >
+                删除容器
+              </Button>
+            )}
+
+             {record.container_id && !record.url && (
               <Button 
                 type="link" 
                 icon={<ReloadOutlined />} 
-                onClick={() => handleRestartContainer(record.id)}
+                onClick={() => handleUpdateUrl(record)}
               >
-                重启
+                更新URL
               </Button>
-            </>
-          )}
-          
-          {record.container_id && record.container_status !== 'running' && record.container_status !== 'removed' && (
-            <Button 
-              type="link" 
-              icon={<PlayCircleOutlined />} 
-              onClick={() => handleStartContainer(record.id)}
-            >
-              启动
-            </Button>
-          )}
-          
-          {record.container_id && !record.url && (
-            <Button 
-              type="link" 
-              icon={<ReloadOutlined />} 
-              onClick={() => handleUpdateUrl(record)}
-            >
-              更新URL
-            </Button>
-          )}
-          
-          {record.container_id && record.container_status !== 'removed' && (
-            <Button 
-              type="link" 
-              danger 
-              icon={<CloseCircleOutlined />} 
-              onClick={() => handleRemoveContainer(record.id)}
-            >
-              删除容器
-            </Button>
-          )}
-        </Space>
+            )}
+          </Space>
+        </div>
       ),
     },
   ];
@@ -436,12 +443,19 @@ const InstanceManagement = () => {
         okText="保存"
         cancelText="取消"
       >
-        <Input.TextArea
+        <Editor
+          height="60vh"
+          defaultLanguage="yaml"
           value={configContent}
-          onChange={(e) => setConfigContent(e.target.value)}
-          rows={20}
-          style={{ fontFamily: 'monospace', fontSize: 13 }}
-          placeholder="加载配置中..."
+          onChange={(value) => setConfigContent(value)}
+          theme="vs-dark"
+          options={{
+            minimap: { enabled: true },
+            fontSize: 14,
+            scrollBeyondLastLine: false,
+            wordWrap: 'on',
+            automaticLayout: true,
+          }}
         />
       </Modal>
     </div>
