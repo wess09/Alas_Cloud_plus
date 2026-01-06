@@ -127,13 +127,20 @@ const InstanceManagement = () => {
   };
 
   const handleStopContainer = async (instanceId) => {
-    try {
-      await api.post(`/admin/docker/instances/${instanceId}/stop`);
-      message.success('容器停止成功');
-      fetchInstances();
-    } catch (error) {
-      // 错误处理已在拦截器中完成
-    }
+    Modal.confirm({
+      title: '确认停止',
+      content: '确定要停止该实例的 Docker 容器吗？',
+      okType: 'danger',
+      onOk: async () => {
+        try {
+          await api.post(`/admin/docker/instances/${instanceId}/stop`);
+          message.success('容器停止成功');
+          fetchInstances();
+        } catch (error) {
+          // 错误处理已在拦截器中完成
+        }
+      },
+    });
   };
 
   const handleRestartContainer = async (instanceId) => {
