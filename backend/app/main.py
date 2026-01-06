@@ -11,10 +11,30 @@ from contextlib import asynccontextmanager
 def on_startup():
     """应用启动时初始化数据库"""
     from app.models import User, UserRole
+    from sqlalchemy import text
     import bcrypt
     
     # 初始化数据库表结构
     init_db()
+    
+    # 自动迁移：添加健康检查字段
+    from app.database import engine
+    with engine.connect() as connection:
+        try:
+            connection.execute(text("ALTER TABLE instances ADD COLUMN health_status VARCHAR(50) DEFAULT 'unknown'"))
+            connection.commit()
+            print("✓ 已添加 health_status 列")
+        except Exception as e:
+            if "duplicate column" not in str(e).lower() and "already exists" not in str(e).lower():
+                print(f"⚠ health_status 列可能已存在: {e}")
+        
+        try:
+            connection.execute(text("ALTER TABLE instances ADD COLUMN last_health_check DATETIME"))
+            connection.commit()
+            print("✓ 已添加 last_health_check 列")
+        except Exception as e:
+            if "duplicate column" not in str(e).lower() and "already exists" not in str(e).lower():
+                print(f"⚠ last_health_check 列可能已存在: {e}")
     
     # 检查并创建默认管理员账号
     db = SessionLocal()
