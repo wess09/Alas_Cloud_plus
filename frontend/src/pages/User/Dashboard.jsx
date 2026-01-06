@@ -33,11 +33,15 @@ const Dashboard = () => {
       onOk: async () => {
         try {
           setRestartingId(instance.id);
-          await api.post(`/user/instances/${instance.id}/restart`);
+          await api.post(`/user/instances/${instance.id}/restart`, {}, { timeout: 60000 });
           message.success(`实例 "${instance.name}" 重启成功`);
         } catch (error) {
           // Error is handled by interceptor, but we can add specific handling if needed
-          console.error('Restart failed', error);
+          if (error.code === 'ECONNABORTED') {
+             message.warning('重启请求超时，但在后台可能仍在进行，请稍后刷新查看状态。');
+          } else {
+             console.error('Restart failed', error);
+          }
         } finally {
           setRestartingId(null);
         }
@@ -99,17 +103,29 @@ const Dashboard = () => {
                         <GlobalOutlined />
                     </div>
                     <div style={{ flex: 1, overflow: 'hidden' }}>
-                        <Tooltip title={instance.name}>
-                            <div style={{ 
-                                fontWeight: 600, 
-                                fontSize: 16, 
-                                whiteSpace: 'nowrap', 
-                                overflow: 'hidden', 
-                                textOverflow: 'ellipsis' 
-                            }}>
-                                {instance.name}
-                            </div>
-                        </Tooltip>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <Tooltip title={instance.name}>
+                                <div style={{ 
+                                    fontWeight: 600, 
+                                    fontSize: 16, 
+                                    whiteSpace: 'nowrap', 
+                                    overflow: 'hidden', 
+                                    textOverflow: 'ellipsis' 
+                                }}>
+                                    {instance.name}
+                                </div>
+                            </Tooltip>
+                            {/* Health Indicator */}
+                            <Tooltip title={`健康状态: ${instance.health_status === 'healthy' ? '正常' : instance.health_status === 'unhealthy' ? '异常' : '未知'}`}>
+                                <div style={{
+                                    width: 8,
+                                    height: 8,
+                                    borderRadius: '50%',
+                                    backgroundColor: instance.health_status === 'healthy' ? '#52c41a' : instance.health_status === 'unhealthy' ? '#ff4d4f' : '#d9d9d9',
+                                    boxShadow: instance.health_status === 'healthy' ? '0 0 6px #52c41a' : instance.health_status === 'unhealthy' ? '0 0 6px #ff4d4f' : 'none'
+                                }} />
+                            </Tooltip>
+                        </div>
                         <div style={{ fontSize: 12, opacity: 0.6, marginTop: 2 }}>
                             ID: {instance.id}
                         </div>

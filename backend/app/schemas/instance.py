@@ -30,6 +30,8 @@ class InstanceResponse(InstanceBase):
     config_path: Optional[str] = None
     host_port: Optional[int] = None
     container_status: Optional[str] = None
+    health_status: Optional[str] = None
+    last_health_check: Optional[datetime] = None
     created_at: datetime
     updated_at: datetime
     

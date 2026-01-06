@@ -20,6 +20,10 @@ class Instance(Base):
     host_port = Column(Integer, nullable=True)  # 主机端口
     container_status = Column(String(50), default="created")  # 容器状态
     
+    # 健康检查信息
+    health_status = Column(String(50), default="unknown")  # healthy, unhealthy, unknown
+    last_health_check = Column(DateTime, nullable=True)    # 上次检查时间
+    
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
     

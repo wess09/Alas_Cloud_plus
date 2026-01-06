@@ -135,10 +135,13 @@ const InstanceManagement = () => {
       content: '确定要重启该实例的 Docker 容器吗？',
       onOk: async () => {
         try {
-          await api.post(`/admin/docker/instances/${instanceId}/restart`);
+          await api.post(`/admin/docker/instances/${instanceId}/restart`, {}, { timeout: 60000 });
           message.success('容器重启成功');
           fetchInstances();
         } catch (error) {
+          if (error.code === 'ECONNABORTED') {
+             message.warning('重启请求超时，但在后台可能仍在进行，请稍后刷新查看状态。');
+          }
           // 错误处理已在拦截器中完成
         }
       },
@@ -223,6 +226,24 @@ const InstanceManagement = () => {
           );
         }
         return text ? <a href={text} target="_blank" rel="noopener noreferrer">{text}</a> : '-';
+      }
+    },
+    {
+      title: '健康状态',
+      dataIndex: 'health_status',
+      key: 'health_status',
+      width: 100,
+      render: (status) => {
+        let color = 'default';
+        let text = '未知';
+        if (status === 'healthy') {
+          color = 'success';
+          text = '正常';
+        } else if (status === 'unhealthy') {
+          color = 'error';
+          text = '异常';
+        }
+        return <Tag color={color}>{text}</Tag>;
       }
     },
     {
