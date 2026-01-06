@@ -213,6 +213,45 @@ Authorization: Bearer {access_token}
 
 ---
 
+#### 2.4 重启实例容器
+
+```
+POST /api/user/instances/{instance_id}/restart
+```
+
+**请求头**:
+
+```
+Authorization: Bearer {access_token}
+```
+
+**路径参数**:
+
+| 参数        | 类型 | 必填 | 说明    |
+| ----------- | ---- | ---- | ------- |
+| instance_id | int  | 是   | 实例 ID |
+
+**响应示例**:
+
+```json
+{
+  "message": "容器重启成功",
+  "instance_id": 1,
+  "instance_name": "示例实例1"
+}
+```
+
+**状态码**:
+
+- `200` - 重启成功
+- `400` - 实例尚未部署容器
+- `403` - 没有权限访问此实例
+- `404` - 实例不存在
+- `401` - 未登录或令牌无效
+- `500` - 重启容器失败
+
+---
+
 ### 3. 管理员接口
 
 > ⚠️ 以下所有接口都需要管理员权限
@@ -680,6 +719,48 @@ DELETE /api/admin/users/{user_id}/instances/{instance_id}
 - `404` - 用户实例关联不存在
 - `401` - 未登录或令牌无效
 - `403` - 权限不足
+
+---
+
+### 4. Docker 容器管理接口
+
+> ⚠️ 以下所有接口都需要管理员权限
+
+#### 4.1 重启实例容器
+
+```
+POST /api/admin/docker/instances/{instance_id}/restart
+```
+
+**请求头**:
+
+```
+Authorization: Bearer {access_token}
+```
+
+**路径参数**:
+
+| 参数        | 类型 | 必填 | 说明    |
+| ----------- | ---- | ---- | ------- |
+| instance_id | int  | 是   | 实例 ID |
+
+**响应示例**:
+
+```json
+{
+  "message": "容器重启成功",
+  "instance_id": 1
+}
+```
+
+**状态码**:
+
+- `200` - 重启成功
+- `400` - 实例尚未部署容器
+- `404` - 实例不存在
+- `401` - 未登录或令牌无效
+- `403` - 权限不足
+- `500` - 重启容器失败
 
 ---
 

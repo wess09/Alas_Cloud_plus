@@ -129,6 +129,22 @@ const InstanceManagement = () => {
     }
   };
 
+  const handleRestartContainer = async (instanceId) => {
+    Modal.confirm({
+      title: '确认重启',
+      content: '确定要重启该实例的 Docker 容器吗？',
+      onOk: async () => {
+        try {
+          await api.post(`/admin/docker/instances/${instanceId}/restart`);
+          message.success('容器重启成功');
+          fetchInstances();
+        } catch (error) {
+          // 错误处理已在拦截器中完成
+        }
+      },
+    });
+  };
+
   const handleRemoveContainer = async (instanceId) => {
     Modal.confirm({
       title: '确认删除容器',
@@ -263,13 +279,22 @@ const InstanceManagement = () => {
           )}
           
           {record.container_id && record.container_status === 'running' && (
-            <Button 
-              type="link" 
-              icon={<PauseCircleOutlined />} 
-              onClick={() => handleStopContainer(record.id)}
-            >
-              停止
-            </Button>
+            <>
+              <Button 
+                type="link" 
+                icon={<PauseCircleOutlined />} 
+                onClick={() => handleStopContainer(record.id)}
+              >
+                停止
+              </Button>
+              <Button 
+                type="link" 
+                icon={<ReloadOutlined />} 
+                onClick={() => handleRestartContainer(record.id)}
+              >
+                重启
+              </Button>
+            </>
           )}
           
           {record.container_id && record.container_status !== 'running' && record.container_status !== 'removed' && (

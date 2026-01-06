@@ -6,6 +6,7 @@ from app.schemas import UserResponse, UserChangePassword, InstanceResponse
 from app.models import User, Instance, UserInstance
 from app.core.security import verify_password, get_password_hash
 from app.core.deps import get_current_user
+from app.services import DockerService
 
 router = APIRouter(prefix="/api/user", tags=["用户"])
 
@@ -64,3 +65,63 @@ def change_password(
     db.commit()
     
     return {"message": "密码修改成功"}
+
+
+@router.post("/instances/{instance_id}/restart", summary="重启实例容器")
+def restart_instance(
+    instance_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    重启用户被分配的实例容器
+    
+    - **instance_id**: 实例 ID
+    
+    只能重启已分配给当前用户的实例
+    """
+    # 检查用户是否有权访问该实例
+    user_instance = db.query(UserInstance).filter(
+        UserInstance.user_id == current_user.id,
+        UserInstance.instance_id == instance_id
+    ).first()
+    
+    if not user_instance:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="您没有权限访问此实例"
+        )
+    
+    # 获取实例
+    instance = db.query(Instance).filter(Instance.id == instance_id).first()
+    
+    if not instance:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="实例不存在"
+        )
+    
+    if not instance.container_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="实例尚未部署容器"
+        )
+    
+    try:
+        docker_service = DockerService()
+        docker_service.restart_container(instance.container_id)
+        
+        instance.container_status = "running"
+        db.commit()
+        
+        return {
+            "message": "容器重启成功",
+            "instance_id": instance_id,
+            "instance_name": instance.name
+        }
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"重启容器失败: {str(e)}"
+        )

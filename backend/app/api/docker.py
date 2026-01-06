@@ -296,3 +296,39 @@ async def update_instance_remote_url(
             detail=f"更新远程 URL 失败: {str(e)}"
         )
 
+
+@router.post("/instances/{instance_id}/restart", summary="重启实例容器")
+async def restart_instance_container(
+    instance_id: int,
+    db: Session = Depends(get_db),
+    current_admin: User = Depends(get_current_admin)
+):
+    """重启指定实例的 Docker 容器"""
+    instance = db.query(Instance).filter(Instance.id == instance_id).first()
+    
+    if not instance:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="实例不存在"
+        )
+    
+    if not instance.container_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="实例尚未部署容器"
+        )
+    
+    try:
+        docker_service = DockerService()
+        docker_service.restart_container(instance.container_id)
+        
+        instance.container_status = "running"
+        db.commit()
+        
+        return {"message": "容器重启成功", "instance_id": instance_id}
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"重启容器失败: {str(e)}"
+        )

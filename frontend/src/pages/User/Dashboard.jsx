@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Row, Col, Typography, Button, Spin, Empty, Tooltip } from 'antd';
-import { GlobalOutlined, LinkOutlined, RightOutlined } from '@ant-design/icons';
+import { Row, Col, Typography, Button, Spin, Empty, Tooltip, Modal, message } from 'antd';
+import { GlobalOutlined, LinkOutlined, RightOutlined, ReloadOutlined } from '@ant-design/icons';
 import api from '../../utils/request';
 
 const { Title, Paragraph, Text } = Typography;
@@ -8,6 +8,7 @@ const { Title, Paragraph, Text } = Typography;
 const Dashboard = () => {
   const [instances, setInstances] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [restartingId, setRestartingId] = useState(null);
 
   useEffect(() => {
     const fetchInstances = async () => {
@@ -22,6 +23,27 @@ const Dashboard = () => {
 
     fetchInstances();
   }, []);
+
+  const handleRestart = (instance) => {
+    Modal.confirm({
+      title: '确认重启',
+      content: `确定要重启实例 "${instance.name}" 吗？这可能需要几秒钟时间。`,
+      okText: '重启',
+      cancelText: '取消',
+      onOk: async () => {
+        try {
+          setRestartingId(instance.id);
+          await api.post(`/user/instances/${instance.id}/restart`);
+          message.success(`实例 "${instance.name}" 重启成功`);
+        } catch (error) {
+          // Error is handled by interceptor, but we can add specific handling if needed
+          console.error('Restart failed', error);
+        } finally {
+          setRestartingId(null);
+        }
+      },
+    });
+  };
 
   if (loading) {
     return (
@@ -92,6 +114,17 @@ const Dashboard = () => {
                             ID: {instance.id}
                         </div>
                     </div>
+                    {/* Restart Button */}
+                    <Tooltip title="重启实例">
+                      <Button
+                        type="text"
+                        shape="circle"
+                        icon={<ReloadOutlined spin={restartingId === instance.id} />}
+                        onClick={() => handleRestart(instance)}
+                        disabled={restartingId === instance.id}
+                        style={{ color: 'rgba(255,255,255,0.8)' }}
+                      />
+                    </Tooltip>
                 </div>
 
                 {/* Body */}
