@@ -71,27 +71,6 @@ class DockerService:
                      print(f"[DEBUG] 复制成功，文件大小: {os.path.getsize(target_path)} bytes")
                 else:
                      print("[DEBUG] 复制看似成功但文件不存在！")
-
-                # 读取并注入 SSH 用户名
-                with open(target_path, 'r', encoding='utf-8') as f:
-                    config = yaml.safe_load(f) or {}
-                
-                # 生成随机 SSH 用户名
-                timestamp_part = str(int(time.time()))[-6:] # 取时间戳后6位
-                random_part = ''.join(random.choices(string.ascii_lowercase + string.digits, k=4))
-                generated_ssh_user = f"alas{timestamp_part}{random_part}"
-                
-                # 更新配置
-                if 'Deploy' not in config: config['Deploy'] = {}
-                if 'RemoteAccess' not in config['Deploy']: config['Deploy']['RemoteAccess'] = {}
-                
-                config['Deploy']['RemoteAccess']['SSHUser'] = generated_ssh_user
-                
-                # 写回文件
-                with open(target_path, 'w', encoding='utf-8') as f:
-                    yaml.dump(config, f, allow_unicode=True)
-                    
-                print(f"[DEBUG] 配置文件已更新并注入 SSHUser: {generated_ssh_user}")
             else:
                 print(f"[WARNING] 模板文件未找到: {template_path}")
                 
@@ -269,79 +248,32 @@ class DockerService:
             str: 远程访问 URL
         """
         # 从 deploy.yaml 读取 SSH 用户名
-        # 增加重试机制，等待配置文件生成（最多等待 30 秒）
+        # 增加重试机制，等待配置文件生成和 SSHUser 更新（最多等待 60 秒）
         ssh_user = None
-        last_error = None
         deploy_yaml_path = os.path.join(config_path, "deploy.yaml")
         
-        # 1. 等待配置文件生成
-        config_exists = False
-        for _ in range(30):  # 尝试 30 次，每次 1 秒（总共 30 秒）
+        # 等待配置文件生成并包含 SSHUser
+        for i in range(60):  # 尝试 60 次，每次 1 秒（总共 60 秒）
             if os.path.exists(deploy_yaml_path):
-                config_exists = True
-                break
-            time.sleep(1)
-            
-        if not config_exists:
-            raise RuntimeError("超时：配置文件未生成")
-
-        # 2. 生成随机字符串并填入 deploy.yaml
-        import random
-        import string
-        
-        try:
-            # 读取现有配置
-            with open(deploy_yaml_path, 'r', encoding='utf-8') as f:
-                config = yaml.safe_load(f) or {}
-            
-            deploy_config = config.get('Deploy', {})
-            remote_access = deploy_config.get('RemoteAccess', {})
-            ssh_user = remote_access.get('SSHUser')
-            
-            # 如果没有 SSHUser，生成一个并写入
-            if not ssh_user:
-                # 生成 10 位随机字符串
-                timestamp_part = str(int(time.time()))[-6:] # 取时间戳后6位
-                random_part = ''.join(random.choices(string.ascii_lowercase + string.digits, k=4))
-                generated_ssh_user = f"alas{timestamp_part}{random_part}"
-                
-                # 更新配置结构
-                if 'Deploy' not in config:
-                    config['Deploy'] = {}
-                if 'RemoteAccess' not in config['Deploy']:
-                    config['Deploy']['RemoteAccess'] = {}
-                
-                config['Deploy']['RemoteAccess']['SSHUser'] = generated_ssh_user
-                
-                # 写回文件
-                with open(deploy_yaml_path, 'w', encoding='utf-8') as f:
-                    yaml.dump(config, f, allow_unicode=True)
-                
-                ssh_user = generated_ssh_user
-                print(f"已自动生成并写入 SSHUser: {ssh_user}")
-                
-                # 写入后等待 5 秒，确保文件写入完成且容器可能进行的重载完成
-                print("等待 5 秒以确认配置生效...")
-                time.sleep(5)
-                
-                # 再次读取配置以确认
                 try:
                     with open(deploy_yaml_path, 'r', encoding='utf-8') as f:
-                        config_recheck = yaml.safe_load(f) or {}
-                    ssh_user_recheck = config_recheck.get('Deploy', {}).get('RemoteAccess', {}).get('SSHUser')
+                        config = yaml.safe_load(f) or {}
                     
-                    if ssh_user_recheck:
-                        ssh_user = ssh_user_recheck
-                        print(f"确认使用的 SSHUser: {ssh_user}")
+                    # 尝试获取 SSHUser
+                    ssh_user = config.get('Deploy', {}).get('RemoteAccess', {}).get('SSHUser')
+                    
+                    if ssh_user:
+                        print(f"[DEBUG] 成功获取 SSHUser: {ssh_user}")
+                        break
                 except Exception as e:
-                    print(f"重读配置失败，将使用刚才生成的配置: {str(e)}")
-                
-        except Exception as e:
-            raise RuntimeError(f"处理配置文件失败: {str(e)}")
+                    print(f"[WARNING] 读取配置失败 (重试 {i+1}/60): {str(e)}")
+            
+            if i % 5 == 0:
+                print(f"[DEBUG] 等待 SSHUser 生成... ({i+1}/60)")
+            time.sleep(1)
             
         if not ssh_user:
-             # 双重检查
-            raise ValueError("未能获取或生成 SSHUser")
+             raise RuntimeError("超时：未能获取 SSHUser，请检查容器是否正常启动并更新配置")
             
         # 3. 建立 SSH 隧道
         # 解析 SSH 服务器地址和端口
