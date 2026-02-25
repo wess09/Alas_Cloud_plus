@@ -42,6 +42,7 @@ class UserResponse(UserBase):
 class UserWithInstances(UserResponse):
     """用户及其实例响应模型"""
     instance_ids: List[int] = Field(default_factory=list, description="实例ID列表")
+    simulator_ids: List[int] = Field(default_factory=list, description="模拟器ID列表")
     
     class Config:
         from_attributes = True

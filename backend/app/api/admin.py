@@ -40,7 +40,8 @@ def get_users(
             "role": user.role,
             "created_at": user.created_at,
             "updated_at": user.updated_at,
-            "instance_ids": [ui.instance_id for ui in user.user_instances]
+            "instance_ids": [ui.instance_id for ui in user.user_instances],
+            "simulator_ids": [us.simulator_id for us in getattr(user, 'user_simulators', [])]
         }
         result.append(UserWithInstances(**user_dict))
     
@@ -68,7 +69,8 @@ def get_user(
         "role": user.role,
         "created_at": user.created_at,
         "updated_at": user.updated_at,
-        "instance_ids": [ui.instance_id for ui in user.user_instances]
+        "instance_ids": [ui.instance_id for ui in user.user_instances],
+        "simulator_ids": [us.simulator_id for us in getattr(user, 'user_simulators', [])]
     }
     
     return UserWithInstances(**user_dict)

@@ -24,3 +24,4 @@ class User(Base):
     
     # 关联关系
     user_instances = relationship("UserInstance", back_populates="user", cascade="all, delete-orphan")
+    user_simulators = relationship("UserSimulator", back_populates="user", cascade="all, delete-orphan")

@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.database import init_db, SessionLocal
-from app.api import auth_router, admin_router, user_router, docker_router
+from app.api import auth_router, admin_router, user_router, docker_router, simulator_router
 from app.services.health_checker import HealthCheckService
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from contextlib import asynccontextmanager
@@ -113,6 +113,7 @@ app.include_router(auth_router)
 app.include_router(admin_router)
 app.include_router(user_router)
 app.include_router(docker_router)
+app.include_router(simulator_router)
 
 
 @app.get("/", tags=["根路径"])
