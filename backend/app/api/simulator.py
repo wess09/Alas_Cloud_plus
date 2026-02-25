@@ -174,7 +174,14 @@ def control_simulator(
         response.raise_for_status()
         return {"message": f"指令 {action} 执行成功", "remote_response": response.json()}
     except requests.exceptions.RequestException as e:
+        error_detail = f"访问远程模拟器控制端失败: {str(e)}"
+        if hasattr(e, 'response') and e.response is not None:
+            try:
+                error_detail += f" - Response: {e.response.json().get('detail', e.response.text)}"
+            except Exception:
+                error_detail += f" - Response: {e.response.text}"
+                
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY, 
-            detail=f"访问远程模拟器控制端失败: {str(e)}"
+            detail=error_detail
         )

@@ -1,5 +1,5 @@
 import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { ConfigProvider, theme as antTheme } from 'antd';
+import { ConfigProvider, theme as antTheme, App as AntdApp } from 'antd';
 import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 import ApiProvider from './utils/request';
@@ -46,50 +46,52 @@ const AppContent = () => {
         }
       }}
     >
-      <AuthProvider>
-        <Routes>
-          <Route path="/login" element={<Login />} />
+      <AntdApp>
+        <AuthProvider>
+          <Routes>
+            <Route path="/login" element={<Login />} />
 
-          <Route path="/" element={<PrivateRoute><MainLayout /></PrivateRoute>}>
-            <Route index element={<Navigate to="/dashboard" replace />} />
+            <Route path="/" element={<PrivateRoute><MainLayout /></PrivateRoute>}>
+              <Route index element={<Navigate to="/dashboard" replace />} />
 
-            {/* User Routes */}
-            <Route path="dashboard" element={<Dashboard />} />
-            <Route path="simulators" element={<MySimulators />} />
-            <Route path="profile" element={<ChangePassword />} />
+              {/* User Routes */}
+              <Route path="dashboard" element={<Dashboard />} />
+              <Route path="simulators" element={<MySimulators />} />
+              <Route path="profile" element={<ChangePassword />} />
 
-            {/* Admin Routes */}
-            <Route path="admin">
-              <Route
-                path="users"
-                element={
-                  <PrivateRoute requireAdmin>
-                    <UserManagement />
-                  </PrivateRoute>
-                }
-              />
-              <Route
-                path="instances"
-                element={
-                  <PrivateRoute requireAdmin>
-                    <InstanceManagement />
-                  </PrivateRoute>
-                }
-              />
-              <Route
-                path="simulators"
-                element={
-                  <PrivateRoute requireAdmin>
-                    <SimulatorManagement />
-                  </PrivateRoute>
-                }
-              />
+              {/* Admin Routes */}
+              <Route path="admin">
+                <Route
+                  path="users"
+                  element={
+                    <PrivateRoute requireAdmin>
+                      <UserManagement />
+                    </PrivateRoute>
+                  }
+                />
+                <Route
+                  path="instances"
+                  element={
+                    <PrivateRoute requireAdmin>
+                      <InstanceManagement />
+                    </PrivateRoute>
+                  }
+                />
+                <Route
+                  path="simulators"
+                  element={
+                    <PrivateRoute requireAdmin>
+                      <SimulatorManagement />
+                    </PrivateRoute>
+                  }
+                />
+              </Route>
             </Route>
-          </Route>
 
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
-        </Routes>
-      </AuthProvider>
+            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          </Routes>
+        </AuthProvider>
+      </AntdApp>
     </ConfigProvider>
   );
 }

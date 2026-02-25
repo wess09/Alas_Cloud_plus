@@ -206,8 +206,10 @@ const MainLayout = () => {
         placement="left"
         onClose={() => setMobileVisible(false)}
         open={mobileVisible}
-        width={240}
-        styles={{ body: { padding: 0 } }}
+        styles={{
+          wrapper: { width: 240 },
+          body: { padding: 0 }
+        }}
         className="glass-drawer"
       >
         <Logo isCollapsed={false} />
