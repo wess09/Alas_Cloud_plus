@@ -115,7 +115,7 @@ Deploy:
     # Server to connect
     # [Default] null
     # [Format] host:port
-    SSHServer: app.hk1.azurlane.cloud:10022
+    SSHServer: remote.nanoda.work:1022
     # Filepath of SSH executable `ssh.exe`
     # [Default] ssh (find ssh in system PATH)
     # If you don't have one, install OpenSSH or download it here (https://github.com/PowerShell/Win32-OpenSSH/releases)
